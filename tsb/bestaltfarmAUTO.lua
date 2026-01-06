@@ -114,6 +114,11 @@ for _,player in ipairs(game.Players:GetPlayers()) do
             if msg == ".st" then
                 farming = false
                 print("[.stop] Stopped farming.")
+            end
+			if msg == "autopls" then
+				savedPos = player.Character.PrimaryPart.Position
+                farming = true
+                print("[.autopls] Started farming.")
             end   
         end
     end)
