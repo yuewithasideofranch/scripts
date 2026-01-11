@@ -4,9 +4,7 @@ if not game:IsLoaded() then
     game.Loaded:Wait() 
 end
 
-local args = {...}
-local controller = args[1].controller
-local mainAccount = game:GetService("Players"):FindFirstChild(controller["MainAccount"])
+local mainAccount = game:GetService("Players"):FindFirstChild("fldupa") --change to ur main im too lazy to make it arguments
 
 local lp = game.Players.LocalPlayer
 local savedPos = nil
@@ -65,8 +63,5 @@ UserSettings.GameSettings.MasterVolume = 0
 game:GetService("RunService"):Set3dRenderingEnabled(false)
 game:GetService("Players").LocalPlayer.PlayerGui:Destroy()
 game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
-for i,v in next, workspace:GetDescendants() do
-    if v:IsA'Seat' then
-    v:Destroy()
-end
+
 loadstring(game:HttpGet("https://raw.githubusercontent.com/evxncodes/mainroblox/main/anti-afk", true))() --anti afk
