@@ -54,22 +54,19 @@ local function farmLoop()
     end
 end
 
+savedPos = mainAccount.Character.PrimaryPart.Position
+print("[.autopls] Saved position of " .. mainAccount.Name .. ":", savedPos)
+farming = true
+print("[.autopls] Auto setup.")
 spawn(farmLoop)
 
 local UserSettings = UserSettings()
-                UserSettings.GameSettings.MasterVolume = 0
-                game:GetService("RunService"):Set3dRenderingEnabled(false)
-                game:GetService("Players").LocalPlayer.PlayerGui:Destroy()
-                game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
-                for i,v in next, workspace:GetDescendants() do
-                if v:IsA'Seat' then
-                v:Destroy()
-                end
-                end
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/evxncodes/mainroblox/main/anti-afk", true))() --anti afk
-
-                    savedPos = mainAccount.Character.PrimaryPart.Position
-                    print("[.autopls] Saved position of " .. player.Name .. ":", savedPos)
-                end
-                farming = true
-                print("[.autopls] Auto setup.")
+UserSettings.GameSettings.MasterVolume = 0
+game:GetService("RunService"):Set3dRenderingEnabled(false)
+game:GetService("Players").LocalPlayer.PlayerGui:Destroy()
+game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+for i,v in next, workspace:GetDescendants() do
+    if v:IsA'Seat' then
+    v:Destroy()
+end
+loadstring(game:HttpGet("https://raw.githubusercontent.com/evxncodes/mainroblox/main/anti-afk", true))() --anti afk
