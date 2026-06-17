@@ -4,7 +4,7 @@ if not game:IsLoaded() then
     game.Loaded:Wait() 
 end
 
-local mainAccount = game:GetService("Players"):FindFirstChild("fldupa") --change to ur main im too lazy to make it arguments
+local mainAccount = game:GetService("Players"):FindFirstChild("zaawwg") --change to ur main im too lazy to make it arguments
 
 local lp = game.Players.LocalPlayer
 local savedPos = nil
