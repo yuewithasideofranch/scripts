@@ -1,10 +1,20 @@
 -- made with love by yue
 
-if not game:IsLoaded() then 
-    game.Loaded:Wait() 
+if not game:IsLoaded() then
+    game.Loaded:Wait()
 end
 
-local mainAccount = game:GetService("Players"):FindFirstChild("yue_wawa") --change to ur main im too lazy to make it arguments
+local MAIN_USERNAME = "yue_wawa"
+if game.Players.LocalPlayer.Name == MAIN_USERNAME then
+    return
+end
+
+local mainAccount = game:GetService("Players"):FindFirstChild(MAIN_USERNAME)
+
+if not mainAccount then
+    warn("Main account not found.")
+    return
+end
 
 local lp = game.Players.LocalPlayer
 local savedPos = nil
@@ -41,28 +51,38 @@ local function farmLoop()
         if farming and savedPos then
             if lp.Character and lp.Character.PrimaryPart then
                 teleport(savedPos)
-                wait(1.5)
+                task.wait(1.5)
                 teleport(savedPos)
                 resetCharacter()
-                wait(5.1)
+                task.wait(5.1)
             end
-            wait(0.5)
+            task.wait(0.5)
         else
-            wait(0.5)
+            task.wait(0.5)
         end
     end
+end
+
+if not (mainAccount.Character and mainAccount.Character.PrimaryPart) then
+    mainAccount.CharacterAdded:Wait()
+    mainAccount.Character:WaitForChild("HumanoidRootPart")
 end
 
 savedPos = mainAccount.Character.PrimaryPart.Position
 print("[.autopls] Saved position of " .. mainAccount.Name .. ":", savedPos)
 farming = true
 print("[.autopls] Auto setup.")
-spawn(farmLoop)
+
+task.spawn(farmLoop)
 
 local UserSettings = UserSettings()
 UserSettings.GameSettings.MasterVolume = 0
 game:GetService("RunService"):Set3dRenderingEnabled(false)
-game:GetService("Players").LocalPlayer.PlayerGui:Destroy()
+
+if lp:FindFirstChild("PlayerGui") then
+    lp.PlayerGui:Destroy()
+end
+
 game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/evxncodes/mainroblox/main/anti-afk", true))() --anti afk
+loadstring(game:HttpGet("https://raw.githubusercontent.com/evxncodes/mainroblox/main/anti-afk", true))()
