@@ -84,5 +84,12 @@ if lp:FindFirstChild("PlayerGui") then
 end
 
 game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+repeat task.wait() until game:IsLoaded()
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/evxncodes/mainroblox/main/anti-afk", true))()
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+
+Players.LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
