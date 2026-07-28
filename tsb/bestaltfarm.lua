@@ -4,7 +4,17 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-local MAIN_USERNAME = "yue_wawa"
+do
+    if setfpscap then
+        pcall(setfpscap, 10)
+    else
+        pcall(function()
+            game:GetService("RunService"):SetFPS(10)
+        end)
+    end
+end
+
+local MAIN_USERNAME = _G.MAIN_USERNAME or "fmp4"
 if game.Players.LocalPlayer.Name == MAIN_USERNAME then
     return
 end
