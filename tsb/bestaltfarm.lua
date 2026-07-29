@@ -6,10 +6,10 @@ end
 
 do
     if setfpscap then
-        pcall(setfpscap, 10)
+        pcall(setfpscap, 5)
     else
         pcall(function()
-            game:GetService("RunService"):SetFPS(10)
+            game:GetService("RunService"):SetFPS(5)
         end)
     end
 end
