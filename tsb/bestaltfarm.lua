@@ -4,6 +4,11 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
+local MAIN_USERNAME = _G.MAIN_USERNAME or "fmp4"
+if game.Players.LocalPlayer.Name == MAIN_USERNAME then
+    return
+end
+
 do
     if setfpscap then
         pcall(setfpscap, 5)
@@ -12,11 +17,6 @@ do
             game:GetService("RunService"):SetFPS(5)
         end)
     end
-end
-
-local MAIN_USERNAME = _G.MAIN_USERNAME or "fmp4"
-if game.Players.LocalPlayer.Name == MAIN_USERNAME then
-    return
 end
 
 local mainAccount = game:GetService("Players"):FindFirstChild(MAIN_USERNAME)
