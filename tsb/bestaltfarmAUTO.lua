@@ -96,21 +96,6 @@ for _,player in ipairs(game.Players:GetPlayers()) do
     player.Chatted:Connect(function(msg)
         msg = msg:lower()
         if player == lp then
-            if msg == ".sp" then
-                if player.Character and player.Character.PrimaryPart then
-                    savedPos = player.Character.PrimaryPart.Position
-                    print("[.setpos] Saved position of " .. player.Name .. ":", savedPos)
-                end
-            end
-            if msg == ".fa" then
-                if savedPos then
-					wait(5)
-                    farming = true
-                    print("[.farm] Started farming loop.")
-                else
-                    print("[.farm] No position saved.")
-                end
-            end
             if msg == ".st" then
                 farming = false
                 print("[.stop] Stopped farming.")
