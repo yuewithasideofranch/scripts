@@ -1,32 +1,14 @@
--- cracked with love by yue (not hard im not flexxing js sayin) 
--- FYI, this code is hella ai due to the orig "creator", not me, this versions js free with some bloated stuff removed <33
+-- @yueslate (Ai bc orig owner made it w/ ai cba to recode)
 
+local TARGET_USER1 = _G.MAIN_USERNAME or "Username1"
+local TARGET_USER2 = _G.ALT_USERNAME or "Username2"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+print("Targeting players: " .. TARGET_USER1 .. " and " .. TARGET_USER2)
 
 local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local GuiService = game:GetService("GuiService")
+local RunService = game:GetService("RunService")
 
 -- Wait for LocalPlayer to exist
 local player = Players.LocalPlayer
@@ -36,6 +18,276 @@ if not player then
 end
 if not player then return end
 
+-- Track if we've done the initial startup check
+local startupCheckDone = false
+local startupCheckTime = 0
+local playerMonitorRunning = false
+local scriptRunning = false
+local isInMainGame = false
+
+-- AFK Prevention - keeps the script and game active
+local function preventAFK()
+    local VirtualUser = game:GetService("VirtualUser")
+    if VirtualUser then
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+    end
+    
+    -- Alternative AFK prevention using mouse movement
+    local mouse = player:GetMouse()
+    if mouse then
+        local pos = mouse.Position
+        mouse.Move(Vector2.new(pos.X + 1, pos.Y + 1))
+        task.wait(0.1)
+        mouse.Move(Vector2.new(pos.X, pos.Y))
+    end
+end
+
+-- Start AFK prevention loop
+task.spawn(function()
+    while true do
+        preventAFK()
+        task.wait(60) -- Every minute
+    end
+end)
+
+-- Check if we're in the main game (lobby) or in a match
+local function checkIfInMainGame()
+    -- Look for lobby indicators (UI elements that only appear in main game)
+    local pg = player:FindFirstChild("PlayerGui")
+    if not pg then return false end
+    
+    -- Check for main game UI elements
+    local hasLobbyUI = false
+    
+    for _, obj in ipairs(pg:GetDescendants()) do
+        if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+            local text = obj.Text and obj.Text:upper() or ""
+            local name = obj.Name:upper() or ""
+            
+            -- Look for lobby-specific buttons
+            if text:find("RANKED") or text:find("PLAY") or text:find("1V1") then
+                hasLobbyUI = true
+            end
+            if text:find("RANKED") then
+                hasLobbyUI = true
+            end
+            if text:find("PLAY") then
+                hasLobbyUI = true
+            end
+        end
+    end
+    
+    return hasLobbyUI
+end
+
+-- Function to detect if we're in a match (ranked game)
+local function isInMatch()
+    local pg = player:FindFirstChild("PlayerGui")
+    if not pg then return false end
+    
+    -- Look for in-match UI elements
+    for _, obj in ipairs(pg:GetDescendants()) do
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+            local text = obj.Text and obj.Text:upper() or ""
+            -- Check for match indicators
+            if text:find("GO") or text:find("READY") or text:find("NEW GAME") then
+                return true
+            end
+            if obj.Name:upper():find("RANKED") and text:find("CONTAINER") then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- Function to check if both target players are in the server
+local function areTargetsInServer()
+    local found1 = false
+    local found2 = false
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            if p.Name == TARGET_USER1 or p.DisplayName == TARGET_USER1 then
+                found1 = true
+            end
+            if p.Name == TARGET_USER2 or p.DisplayName == TARGET_USER2 then
+                found2 = true
+            end
+        end
+    end
+    return found1 and found2
+end
+
+-- Function to check if any non-target players are in the server
+local function hasNonTargetPlayers()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            local isTarget1 = p.Name == TARGET_USER1 or p.DisplayName == TARGET_USER1
+            local isTarget2 = p.Name == TARGET_USER2 or p.DisplayName == TARGET_USER2
+            if not isTarget1 and not isTarget2 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- Function to teleport back to the main game
+local function teleportToMainGame()
+    print("Teleporting back to main game (10449761463)...")
+    setStatus("Teleporting...", Color3.fromRGB(255, 150, 50))
+    task.wait(0.5)
+    
+    -- Only teleport if we're not already in the main game
+    if not checkIfInMainGame() then
+        TeleportService:Teleport(10449761463, player)
+    else
+        print("Already in main game, no teleport needed")
+    end
+end
+
+-- Function to click a button (with error handling)
+local function clickButton(btn)
+    if not btn then return false end
+    
+    -- Prevent clicking if button is nil or not on screen
+    pcall(function()
+        local VIM = game:GetService("VirtualInputManager")
+        local inset = GuiService:GetGuiInset()
+        local pos = btn.AbsolutePosition + btn.AbsoluteSize / 2
+        local x, y = pos.X + inset.X, pos.Y + inset.Y
+        VIM:SendMouseMoveEvent(x, y, game)
+        task.wait(0.2)
+        VIM:SendMouseButtonEvent(x, y, 0, true, game, 1)
+        task.wait(0.1)
+        VIM:SendMouseButtonEvent(x, y, 0, false, game, 1)
+    end)
+    return true
+end
+
+-- Function to find button by name/text
+local function findButton(searchName, searchText)
+    local pg = player:FindFirstChild("PlayerGui")
+    if not pg then return nil end
+    for _, obj in ipairs(pg:GetDescendants()) do
+        if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+            if searchName and obj.Name:lower():find(searchName:lower()) then
+                return obj
+            end
+            if searchText and obj.Text and obj.Text:lower():find(searchText:lower()) then
+                return obj
+            end
+        end
+    end
+    return nil
+end
+
+-- Function to find button by text (with delay to prevent spam)
+local function findButtonByText(searchText)
+    local pg = player:FindFirstChild("PlayerGui")
+    if not pg then return nil end
+    
+    local foundButtons = {}
+    for _, obj in ipairs(pg:GetDescendants()) do
+        if obj:IsA("TextButton") and not obj:IsDescendantOf(statusGui) then
+            local text = obj.Text and string.upper(obj.Text) or ""
+            if text:find(searchText) and isOnScreen(obj) then
+                table.insert(foundButtons, obj)
+            end
+        end
+    end
+    
+    -- Return the first valid button found
+    return foundButtons[1]
+end
+
+-- Function to click through the menu to start matchmaking
+local function startMatchmaking()
+    print("Starting matchmaking process...")
+    setStatus("Matchmaking...", Color3.fromRGB(100, 200, 255))
+    task.wait(3)
+
+    -- Click the server list / top bar button
+    local serverListBtn = findButton(nil, "server") or findButton("ServerList", nil) or findButton("Menu", nil)
+    if serverListBtn then
+        print("Clicking server list button...")
+        clickButton(serverListBtn)
+        task.wait(2)
+    end
+
+    -- Click "Open Ranked"
+    local openRanked = findButton(nil, "ranked")
+    if openRanked then
+        print("Clicking Open Ranked...")
+        clickButton(openRanked)
+        task.wait(2)
+    end
+
+    -- Click "Ranked"
+    local rankedBtn = findButton("Ranked", nil) or findButton(nil, "ranked game")
+    if rankedBtn then
+        print("Clicking Ranked...")
+        clickButton(rankedBtn)
+        task.wait(2)
+    end
+
+    -- Click "1v1s"
+    local oneVsOne = findButton("1v1", nil) or findButton(nil, "1v1")
+    if oneVsOne then
+        print("Clicking 1v1s...")
+        clickButton(oneVsOne)
+        task.wait(2)
+    end
+
+    print("Matchmaking started!")
+    setStatus("Matchmaking...", Color3.fromRGB(60, 220, 140))
+end
+
+-- Monitor for players joining (with freeze prevention)
+local function monitorPlayers()
+    if playerMonitorRunning then return end
+    playerMonitorRunning = true
+    local lastCheck = tick()
+    
+    while true do
+        -- Only check after startup is complete
+        if startupCheckDone then
+            -- Prevent freezing by spacing out checks
+            if tick() - lastCheck >= 1 then
+                lastCheck = tick()
+                
+                -- Check if we're in the main game
+                local inMain = checkIfInMainGame()
+                local inMatch = isInMatch()
+                
+                -- If we're in the main game, always start matchmaking (don't check for targets)
+                if inMain then
+                    print("In main game - starting matchmaking...")
+                    startMatchmaking()
+                end
+                
+                -- If anyone other than the target accounts joins, INSTANTLY leave
+                if hasNonTargetPlayers() then
+                    print("Non-target player detected! Teleporting immediately...")
+                    teleportToMainGame()
+                    break
+                end
+                
+                -- Check if targets left during a match
+                if not areTargetsInServer() and inMatch then
+                    print("Target player(s) left the game! Teleporting back...")
+                    teleportToMainGame()
+                    break
+                end
+            end
+        end
+        task.wait(0.5) -- Fast check for instant reaction
+    end
+end
+
 -- ===== RANK ====================================================
 local function getMyRank()
     local ls = player:FindFirstChild("leaderstats")
@@ -43,9 +295,7 @@ local function getMyRank()
     return rank and rank.Value or nil
 end
 
--- Tie counts as NOT beaten (original used >=, so a tie read as a loss and
--- neither account reset). On a tie all tied clients seed the same RNG from
--- sorted UserIds, so they independently pick the SAME winner - one resets.
+-- Tie counts as NOT beaten
 local function amIHighest()
     local myRank = getMyRank()
     if myRank == nil then return false end
@@ -74,7 +324,7 @@ local function amIHighest()
     return tied[Random.new(seed):NextInteger(1, #tied)] == player
 end
 
--- ===== SESSION STATS (persist across teleports) ================
+-- ===== SESSION STATS ================
 local STATS_FILE = "rankedauto_session.txt"
 local SESSION_TIMEOUT = 3 * 3600
 local startRank, startTime
@@ -164,7 +414,7 @@ local function setStatus(txt, color)
     dot.BackgroundColor3 = color or Color3.fromRGB(60, 220, 140)
 end
 
--- stats updater (every 5s - cheap, no GUI tree walking)
+-- stats updater (with throttling)
 task.spawn(function()
     while true do
         if not startRank then
@@ -187,18 +437,6 @@ task.spawn(function()
     end
 end)
 
--- RightControl resets the session stats
-game:GetService("UserInputService").InputBegan:Connect(function(input, typing)
-    if typing then return end
-    if input.KeyCode == Enum.KeyCode.RightControl then
-        startRank = getMyRank()
-        startTime = os.time()
-        saveSession()
-        statLbl.Text = "+0  |  --/hr"
-        setStatus("Stats reset", Color3.fromRGB(120, 110, 255))
-    end
-end)
-
 -- ===== RESET ==================================================
 local function isAlive()
     local char = player.Character
@@ -216,7 +454,6 @@ local function killOnce()
     return false
 end
 
--- Spams the reset until the character actually dies, then confirms.
 local function forceReset(timeout)
     local t0 = tick()
     while tick() - t0 < (timeout or 8) do
@@ -225,6 +462,8 @@ local function forceReset(timeout)
         if not isAlive() then
             return true
         end
+        -- Prevent freezing by yielding
+        task.wait()
     end
     return false
 end
@@ -250,50 +489,10 @@ local function isOnScreen(obj)
     return obj.AbsoluteSize.X > 4 and obj.AbsoluteSize.Y > 4
 end
 
-local function findButtonByText(searchText)
-    local pg = player:FindFirstChild("PlayerGui")
-    if not pg then return nil end
-    for _, obj in ipairs(pg:GetDescendants()) do
-        if obj:IsA("TextButton") and not obj:IsDescendantOf(statusGui)
-            and string.upper(obj.Text):find(searchText) and isOnScreen(obj) then
-            return obj
-        end
-    end
-    return nil
-end
-
-local function findGoLabel()
-    local pg = player:FindFirstChild("PlayerGui")
-    if not pg then return nil end
-    for _, obj in ipairs(pg:GetDescendants()) do
-        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-            local raw = obj.Text
-            if raw and #raw > 0 and #raw <= 6 then
-                local t = raw:gsub("%s+", ""):gsub("[!%.%-]", ""):upper()
-                if t == "GO" and isOnScreen(obj) then
-                    return obj
-                end
-            end
-        end
-    end
-    return nil
-end
-
 local function textIsGo(raw)
     if not raw or #raw == 0 or #raw > 6 then return false end
     local t = raw:gsub("%s+", ""):gsub("[!%.%-]", ""):upper()
     return t == "GO"
-end
-
-local function objectIsGo(obj)
-    if not obj or not obj.Parent then return false end
-    local ok, res = pcall(function()
-        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-            return textIsGo(obj.Text)
-        end
-        return false
-    end)
-    return ok and res == true
 end
 
 local function waitForGo(timeout)
@@ -305,7 +504,7 @@ local function waitForGo(timeout)
         local ok, c = pcall(function()
             return pg.DescendantAdded:Connect(function(obj)
                 task.wait()
-                if objectIsGo(obj) then found = true end
+                if obj:IsA("TextLabel") and textIsGo(obj.Text) then found = true end
             end)
         end)
         if ok and c then conns[#conns+1] = c end
@@ -329,6 +528,8 @@ local function waitForGo(timeout)
     local t0 = tick()
     while not found and tick() - t0 < timeout do
         task.wait(0.1)
+        -- Prevent freezing
+        task.wait()
     end
 
     for _, c in ipairs(conns) do
@@ -350,15 +551,20 @@ local function findReadyButton()
 end
 
 local function clickOnce(btn)
-    local VIM = game:GetService("VirtualInputManager")
-    local inset = game:GetService("GuiService"):GetGuiInset()
-    local pos = btn.AbsolutePosition + btn.AbsoluteSize / 2
-    local x, y = pos.X + inset.X, pos.Y + inset.Y
-    VIM:SendMouseMoveEvent(x, y, game)
-    task.wait(0.3)
-    VIM:SendMouseButtonEvent(x, y, 0, true, game, 1)
-    task.wait(0.1)
-    VIM:SendMouseButtonEvent(x, y, 0, false, game, 1)
+    -- Prevent clicking if button is nil
+    if not btn then return end
+    
+    pcall(function()
+        local VIM = game:GetService("VirtualInputManager")
+        local inset = GuiService:GetGuiInset()
+        local pos = btn.AbsolutePosition + btn.AbsoluteSize / 2
+        local x, y = pos.X + inset.X, pos.Y + inset.Y
+        VIM:SendMouseMoveEvent(x, y, game)
+        task.wait(0.3)
+        VIM:SendMouseButtonEvent(x, y, 0, true, game, 1)
+        task.wait(0.1)
+        VIM:SendMouseButtonEvent(x, y, 0, false, game, 1)
+    end)
 end
 
 local function clickUntilGone(findFn, label)
@@ -383,7 +589,7 @@ task.spawn(function()
         if findReadyButton() then
             clickUntilGone(findReadyButton, "READY")
         end
-        task.wait(2)
+        task.wait(3) -- Increased delay to prevent spam
     end
 end)
 
@@ -392,21 +598,54 @@ task.spawn(function()
         if findNewGameButton() then
             clickUntilGone(findNewGameButton, "NEW GAME")
         end
-        task.wait(2)
+        task.wait(3) -- Increased delay to prevent spam
     end
 end)
 
 -- ===== MAIN ===================================================
-task.spawn(function()
+local function mainScript()
+    if scriptRunning then return end
+    scriptRunning = true
+    
+    print("Waiting 5 seconds for server to fully load...")
+    setStatus("Loading...", Color3.fromRGB(255, 200, 50))
+    task.wait(5) -- Wait for server to fully load
+    
+    -- Check if we're in the main game or a match
+    isInMainGame = checkIfInMainGame()
+    
+    if isInMainGame then
+        print("Detected: In main game (lobby)")
+        setStatus("In Lobby", Color3.fromRGB(100, 200, 255))
+        
+        -- ALWAYS start matchmaking regardless of targets
+        print("Starting matchmaking... (targets don't need to be present)")
+        startMatchmaking()
+    else
+        print("Detected: In match or loading...")
+        setStatus("In Match", Color3.fromRGB(255, 200, 50))
+    end
+    
+    -- Startup check complete
+    startupCheckDone = true
+    startupCheckTime = tick()
+
+    -- Start monitoring for players
+    task.spawn(monitorPlayers)
+
+    -- Wait for rank to load
     local t0 = tick()
     while getMyRank() == nil and tick() - t0 < 30 do
         task.wait(0.5)
     end
     print("rank loaded:", tostring(getMyRank()))
 
+    -- Main reset loop (only runs if in a match)
     while true do
-        if isAlive() and amIHighest() then
-
+        -- Check if we're in a match before running reset logic
+        local inMatch = isInMatch()
+        
+        if inMatch and isAlive() and amIHighest() then
             print("=== cycle start ===")
 
             -- RESET 1
@@ -431,7 +670,7 @@ task.spawn(function()
             forceReset(8)
             print("reset 2 done")
 
-            -- ROUND GATE: do not start another cycle until this round is clearly over
+            -- ROUND GATE
             print("waiting for round to end..."); setStatus("Round end", Color3.fromRGB(130,130,155))
             local gateStart = tick()
             local sawEnd = false
@@ -441,6 +680,8 @@ task.spawn(function()
                     break
                 end
                 task.wait(1)
+                -- Prevent freezing
+                task.wait()
             end
             print(sawEnd and "round ended (NEW GAME seen)" or "round gate timed out")
 
@@ -448,7 +689,50 @@ task.spawn(function()
             print("=== cycle end ==="); setStatus("Running", Color3.fromRGB(60,220,140))
         end
         task.wait(0.5)
+        -- Prevent freezing
+        task.wait()
+    end
+end
+
+-- ===== AUTO-REEXECUTION ON SERVER JOIN =====
+-- This will automatically re-run the script when you join a new server
+
+local function startScript()
+    -- Reset flags
+    scriptRunning = false
+    startupCheckDone = false
+    playerMonitorRunning = false
+    
+    -- Small delay to ensure everything is loaded
+    task.wait(2)
+    mainScript()
+end
+
+-- Start the script immediately
+mainScript()
+
+-- Re-run when the player respawns or game state changes
+player.CharacterAdded:Connect(function()
+    task.wait(3)
+    startScript()
+end)
+
+-- Re-run when PlayerGui loads (for server changes)
+player:WaitForChild("PlayerGui").ChildAdded:Connect(function()
+    task.wait(4)
+    startScript()
+end)
+
+-- Monitor for teleport/loading screen changes
+game:GetService("GuiService").LoadingGui:GetPropertyChangedSignal("Enabled"):Connect(function()
+    if not game:GetService("GuiService").LoadingGui.Enabled then
+        task.wait(4)
+        startScript()
     end
 end)
 
 print("Ranked Auto-Reset Script Loaded Successfully!")
+print("Targeting Main: " .. TARGET_USER1 .. " and Alt: " .. TARGET_USER2)
+print("Script will auto-reexecute on server joins!")
+print("AFK Prevention Active - Script will not freeze!")
+print("Matchmaking will start regardless of target presence!")
