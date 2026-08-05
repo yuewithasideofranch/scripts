@@ -1,14 +1,22 @@
 -- @yueslate (Ai bc orig owner made it w/ ai cba to recode)
+-- added a lot to this script that the orig owner doesnt have in his script..
 
 local TARGET_USER1 = _G.MAIN_USERNAME or "Username1"
 local TARGET_USER2 = _G.ALT_USERNAME or "Username2"
+local WEBHOOK_URL = _G.WEBHOOK_URL or ""
 
 print("Targeting players: " .. TARGET_USER1 .. " and " .. TARGET_USER2)
+if WEBHOOK_URL ~= "" then
+    print("Webhook configured: " .. WEBHOOK_URL)
+else
+    print("No webhook configured - set _G.WEBHOOK_URL")
+end
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 -- Wait for LocalPlayer to exist
 local player = Players.LocalPlayer
@@ -17,6 +25,107 @@ if not player then
     player = Players.LocalPlayer
 end
 if not player then return end
+
+-- Track rank history for webhook
+local rankHistory = {}
+local gameCount = 0
+local lastWebhookTime = 0
+
+-- Function to send webhook
+local function sendWebhook(message)
+    if WEBHOOK_URL == "" then return end
+    
+    pcall(function()
+        local data = {
+            content = message,
+            username = "Ranked Auto"
+        }
+        local json = HttpService:JSONEncode(data)
+        local headers = {
+            ["Content-Type"] = "application/json"
+        }
+        request({
+            Url = WEBHOOK_URL,
+            Method = "POST",
+            Headers = headers,
+            Body = json
+        })
+    end)
+end
+
+-- Function to get player rank by username
+local function getPlayerRank(username)
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Name == username or p.DisplayName == username then
+            local ls = p:FindFirstChild("leaderstats")
+            local rank = ls and ls:FindFirstChild("Rank")
+            if rank then
+                return rank.Value
+            end
+        end
+    end
+    return nil
+end
+
+-- Function to send rank update webhook
+local function sendRankUpdate()
+    local mainRank = getPlayerRank(TARGET_USER1)
+    local altRank = getPlayerRank(TARGET_USER2)
+    local myRank = getMyRank()
+    
+    local message = string.format(
+        "**Rank Update - Game #%d**\n" ..
+        "━━━━━━━━━━━━━━━━━━\n" ..
+        "👤 **Main** (%s): Rank **%d**\n" ..
+        "👤 **Alt** (%s): Rank **%d**\n" ..
+        "👤 **You**: Rank **%d**\n" ..
+        "━━━━━━━━━━━━━━━━━━\n" ..
+        "🕐 <t:%d:R>",
+        gameCount,
+        TARGET_USER1,
+        mainRank or 0,
+        TARGET_USER2,
+        altRank or 0,
+        myRank or 0,
+        os.time()
+    )
+    
+    sendWebhook(message)
+end
+
+-- Track rank changes for webhook
+local function trackRankChanges()
+    local mainRank = getPlayerRank(TARGET_USER1)
+    local altRank = getPlayerRank(TARGET_USER2)
+    local myRank = getMyRank()
+    
+    if mainRank and altRank and myRank then
+        -- Check if this is a new game (ranks changed)
+        if #rankHistory > 0 then
+            local last = rankHistory[#rankHistory]
+            if last.mainRank ~= mainRank or last.altRank ~= altRank or last.myRank ~= myRank then
+                gameCount = gameCount + 1
+                sendRankUpdate()
+            end
+        else
+            -- First time tracking
+            gameCount = 1
+            sendRankUpdate()
+        end
+        
+        table.insert(rankHistory, {
+            mainRank = mainRank,
+            altRank = altRank,
+            myRank = myRank,
+            time = os.time()
+        })
+        
+        -- Keep history limited
+        if #rankHistory > 50 then
+            table.remove(rankHistory, 1)
+        end
+    end
+end
 
 -- Track if we've done the initial startup check
 local startupCheckDone = false
@@ -263,10 +372,15 @@ local function monitorPlayers()
                 local inMain = checkIfInMainGame()
                 local inMatch = isInMatch()
                 
-                -- If we're in the main game, always start matchmaking (don't check for targets)
+                -- If we're in the main game, always start matchmaking
                 if inMain then
                     print("In main game - starting matchmaking...")
                     startMatchmaking()
+                end
+                
+                -- Track ranks for webhook (only in match)
+                if inMatch then
+                    trackRankChanges()
                 end
                 
                 -- If anyone other than the target accounts joins, INSTANTLY leave
@@ -589,7 +703,7 @@ task.spawn(function()
         if findReadyButton() then
             clickUntilGone(findReadyButton, "READY")
         end
-        task.wait(3) -- Increased delay to prevent spam
+        task.wait(3)
     end
 end)
 
@@ -598,7 +712,7 @@ task.spawn(function()
         if findNewGameButton() then
             clickUntilGone(findNewGameButton, "NEW GAME")
         end
-        task.wait(3) -- Increased delay to prevent spam
+        task.wait(3)
     end
 end)
 
@@ -609,7 +723,7 @@ local function mainScript()
     
     print("Waiting 5 seconds for server to fully load...")
     setStatus("Loading...", Color3.fromRGB(255, 200, 50))
-    task.wait(5) -- Wait for server to fully load
+    task.wait(5)
     
     -- Check if we're in the main game or a match
     isInMainGame = checkIfInMainGame()
@@ -695,15 +809,11 @@ local function mainScript()
 end
 
 -- ===== AUTO-REEXECUTION ON SERVER JOIN =====
--- This will automatically re-run the script when you join a new server
-
 local function startScript()
-    -- Reset flags
     scriptRunning = false
     startupCheckDone = false
     playerMonitorRunning = false
     
-    -- Small delay to ensure everything is loaded
     task.wait(2)
     mainScript()
 end
@@ -736,3 +846,11 @@ print("Targeting Main: " .. TARGET_USER1 .. " and Alt: " .. TARGET_USER2)
 print("Script will auto-reexecute on server joins!")
 print("AFK Prevention Active - Script will not freeze!")
 print("Matchmaking will start regardless of target presence!")
+
+if WEBHOOK_URL ~= "" then
+    -- Send startup webhook
+    sendWebhook("**🚀 Ranked Auto Started!**\nTargeting: " .. TARGET_USER1 .. " & " .. TARGET_USER2)
+    print("Webhook system active!")
+else
+    print("No webhook configured - set _G.WEBHOOK_URL to enable")
+end
